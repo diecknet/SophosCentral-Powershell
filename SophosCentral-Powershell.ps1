@@ -40,7 +40,7 @@ function Set-SophosTamperProtection {
         $json = @{"enabled" = "true"} | ConvertTo-Json
     }
     else {
-        Write-Host "[ERROR] please supply -enable or -disable flags when toggling tamper protection"
+        Write-Host "[ERROR] please supply -status with either `$true or `$false when setting tamper protection"
         return
     }
 
