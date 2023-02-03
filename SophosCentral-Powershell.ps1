@@ -1,26 +1,39 @@
 ﻿### function ###
-function Toggle-TamperProtection {
+function Set-SophosTamperProtection {
+    [CmdletBinding()]
+    [Alias("Toggle-TamperProtection")]
 
     param (
         
         ## hostname ##
-        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [Parameter(Mandatory=$false,ValueFromPipeline=$true,
+            ParameterSetName="Single-System")]
         [string]
         $computerName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$false,
+        ParameterSetName="CSV-Import")]
         [string]
         $csv
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$false,
+        ParameterSetName="All-Systems")]
         [string]
         $all
         ,
         [Parameter(Mandatory=$false)]
+        [Parameter(ParameterSetName="Single-System")]
+        [Parameter(ParameterSetName="All-Systems")]
+        [Parameter(ParameterSetName="CSV-Import")]
+        [Parameter(ParameterSetName="Enable")]
         [switch]
         $enable
         ,
         [Parameter(Mandatory=$false)]
+        [Parameter(ParameterSetName="Single-System")]
+        [Parameter(ParameterSetName="All-Systems")]
+        [Parameter(ParameterSetName="CSV-Import")]
+        [Parameter(ParameterSetName="Disable")]
         [switch]
         $disable
     
@@ -105,7 +118,7 @@ function Toggle-TamperProtection {
         
         $endpointId = Get-SophosEndpointId $computerName
 
-        if ($endpointId -eq $null) {
+        if ($null -eq $endpointId) {
             return
         }
     
@@ -169,9 +182,9 @@ function Get-SophosEndpoints {
         # enumerate results and append to csv
         $sophosEndpoints += @($endpoints_resp.items | 
             Select-Object -Property id,type,hostname,health,os,
-            @{name="ipv4Addresses"; expression={$_.ipv4Addresses | select -First 1}},
-            @{name="ipv6Addresses"; expression={$_.ipv6Addresses | Select -First 1}},
-            @{name="macAddresses"; expression={$_.macAddresses | Select -First 1}},
+            @{name="ipv4Addresses"; expression={$_.ipv4Addresses | Select-Object -First 1}},
+            @{name="ipv6Addresses"; expression={$_.ipv6Addresses | Select-Object -First 1}},
+            @{name="macAddresses"; expression={$_.macAddresses | Select-Object -First 1}},
             associatedPerson,tamperProtectionEnabled,
             @{name="endpointProtection"; expression={$_.assignedProducts[0] | Where-Object -Property code -eq -Value "endpointProtection"}},
             @{name="interceptX"; expression={$_.assignedProducts[1] | Where-Object -Property code -eq -Value "interceptX"}},
@@ -200,7 +213,7 @@ function Get-SophosEndpoints {
         $duplicates = Select-Object -InputObject $endpoint_group -ExpandProperty "Group" 
     
         # select the unique endpoint from the duplicates
-        $unique_endpoint = $duplicates | select -First 1
+        $unique_endpoint = $duplicates | Select-Object -First 1
 
         $sophosEndpoints_noDupes += $unique_endpoint
 
@@ -209,7 +222,7 @@ function Get-SophosEndpoints {
     if ($export) {
         $sophosEndpoints_noDupes = $sophosEndpoints_noDupes | Export-Csv -Path .\endpoints.csv -NoTypeInformation -Encoding UTF8
     } else {
-        $sophosEndpoints_noDupes = $sophosEndpoints_noDupes | sort "hostname"
+        $sophosEndpoints_noDupes = $sophosEndpoints_noDupes | Sort-Object "hostname"
     }
 
     return $sophosEndpoints_noDupes
@@ -250,7 +263,10 @@ function Get-SophosEndpointId {
 }
 
 
-function Authenticate-SophosApi {
+function Connect-Sophos {
+    [CmdletBinding()]
+    [Alias("Authenticate-SophosApi")]
+    param()
 
     try {
         $apiCredentials = Read-Host "Enter path to sophos api credentials file (\path\to\filename.json)"
@@ -330,7 +346,9 @@ function Import-SophosEndpointHostList {
 
 #$updatedEndpointsList = Import-Csv -Path .\endpoints.csv -Encoding UTF8
 
-function Check-TamperProtectionStatus {
+function Get-SophosTamperProtectionStatus {
+    [CmdletBinding()]
+    [Alias("Check-TamperProtectionStatus")]
     Param (
         [Parameter(Mandatory=$false)]
         [string]
