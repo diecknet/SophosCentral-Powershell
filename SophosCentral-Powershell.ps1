@@ -1,6 +1,6 @@
 ﻿### function ###
 function Set-SophosTamperProtection {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Single-System')]
     [Alias("Toggle-TamperProtection")]
 
     param (
@@ -18,34 +18,24 @@ function Set-SophosTamperProtection {
         ,
         [Parameter(Mandatory=$false,
         ParameterSetName="All-Systems")]
-        [string]
+        [switch]
         $all
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$true)]
         [Parameter(ParameterSetName="Single-System")]
         [Parameter(ParameterSetName="All-Systems")]
         [Parameter(ParameterSetName="CSV-Import")]
-        [Parameter(ParameterSetName="Enable")]
-        [switch]
-        $enable
-        ,
-        [Parameter(Mandatory=$false)]
-        [Parameter(ParameterSetName="Single-System")]
-        [Parameter(ParameterSetName="All-Systems")]
-        [Parameter(ParameterSetName="CSV-Import")]
-        [Parameter(ParameterSetName="Disable")]
-        [switch]
-        $disable
-    
+        [bool]
+        $status
     )
 
     $sophosApiResponse = Authenticate-SophosApi
 
-    if ($disable) {
+    if ($status -eq $false) {
         $promptUserMessage = "disabling"
         $json = @{"enabled" = "false"} | ConvertTo-Json
     }
-    elseIf ($enable) {
+    elseIf ($status -eq $true) {
         $promptUserMessage = "enabling"
         $json = @{"enabled" = "true"} | ConvertTo-Json
     }
