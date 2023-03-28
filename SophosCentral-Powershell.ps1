@@ -1,30 +1,30 @@
 ﻿### function ###
 function Set-SophosTamperProtection {
-    [CmdletBinding(DefaultParameterSetName='Single-System')]
+    [CmdletBinding(DefaultParameterSetName = 'Single-System')]
     [Alias("Toggle-TamperProtection")]
 
     param (
         
         ## hostname ##
-        [Parameter(Mandatory=$false,ValueFromPipeline=$true,
-            ParameterSetName="Single-System")]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true,
+            ParameterSetName = "Single-System")]
         [string]
         $computerName
         ,
-        [Parameter(Mandatory=$false,
-        ParameterSetName="CSV-Import")]
+        [Parameter(Mandatory = $false,
+            ParameterSetName = "CSV-Import")]
         [string]
         $csv
         ,
-        [Parameter(Mandatory=$false,
-        ParameterSetName="All-Systems")]
+        [Parameter(Mandatory = $false,
+            ParameterSetName = "All-Systems")]
         [switch]
         $all
         ,
-        [Parameter(Mandatory=$true)]
-        [Parameter(ParameterSetName="Single-System")]
-        [Parameter(ParameterSetName="All-Systems")]
-        [Parameter(ParameterSetName="CSV-Import")]
+        [Parameter(Mandatory = $true)]
+        [Parameter(ParameterSetName = "Single-System")]
+        [Parameter(ParameterSetName = "All-Systems")]
+        [Parameter(ParameterSetName = "CSV-Import")]
         [bool]
         $status
     )
@@ -33,11 +33,11 @@ function Set-SophosTamperProtection {
 
     if ($status -eq $false) {
         $promptUserMessage = "disabling"
-        $json = @{"enabled" = "false"} | ConvertTo-Json
+        $json = @{"enabled" = "false" } | ConvertTo-Json
     }
     elseIf ($status -eq $true) {
         $promptUserMessage = "enabling"
-        $json = @{"enabled" = "true"} | ConvertTo-Json
+        $json = @{"enabled" = "true" } | ConvertTo-Json
     }
     else {
         Write-Host "[ERROR] please supply -status with either `$true or `$false when setting tamper protection"
@@ -46,7 +46,7 @@ function Set-SophosTamperProtection {
 
     if ($all) {
         $promptUser = Read-Host "$($promptUserMessage) + tamper protection from all devices. Press 'y' to continue."
-        if($promptUser -eq 'y') {
+        if ($promptUser -eq 'y') {
             $endpoints = Get-SophosEndpoints -sophosApiResponse $sophosApiResponse
 
             foreach ($endpoint in $endpoints) {
@@ -56,10 +56,10 @@ function Set-SophosTamperProtection {
                 $uri = ($sophosApiResponse['dataRegionApiUri'] + "/endpoint/v1/endpoints/" + $endpointId + "/tamper-protection")
      
                 try {
-                # api request to toggle tamper protection 
-                $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization="Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID"=$sophosApiResponse['whoami_resp'].id} -ContentType "application/json" -Body $json -Uri $uri
-                Write-Host "$($promptUserMessage) tamper protection on device: $($endpoint.hosts)"
-                Start-Sleep -Milliseconds 250
+                    # api request to toggle tamper protection 
+                    $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization = "Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID" = $sophosApiResponse['whoami_resp'].id } -ContentType "application/json" -Body $json -Uri $uri
+                    Write-Host "$($promptUserMessage) tamper protection on device: $($endpoint.hosts)"
+                    Start-Sleep -Milliseconds 250
 
                 } 
                 catch {
@@ -89,7 +89,7 @@ function Set-SophosTamperProtection {
             
             try {
                 # api request to toggle tamper protection 
-                $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization="Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID"=$sophosApiResponse['whoami_resp'].id} -ContentType "application/json" -Body $json -Uri $uri
+                $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization = "Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID" = $sophosApiResponse['whoami_resp'].id } -ContentType "application/json" -Body $json -Uri $uri
                 Write-Host "$($promptUserMessage) tamper protection on device: $($endpoint.hosts)"
                 Start-Sleep -Milliseconds 250
 
@@ -117,7 +117,7 @@ function Set-SophosTamperProtection {
         
         # api request to remove tamper protection
         try { 
-            $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization="Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID"=$sophosApiResponse['whoami_resp'].id} -Uri $uri -ContentType "application/json" -Body $json
+            $tamperProtectionToggleResponse = Invoke-RestMethod -Method Post -Headers @{Authorization = "Bearer $($sophosApiResponse['token_resp'].access_token)"; "X-Tenant-ID" = $sophosApiResponse['whoami_resp'].id } -Uri $uri -ContentType "application/json" -Body $json
         }
         catch {
             Write-Warning "Failed to toggle tamper protection for device: $($computerName) with id: $($endpointId)"
@@ -139,10 +139,10 @@ function Get-SophosEndpoints {
 
     param (
         
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         $sophosApiResponse
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [switch]
         $export
     
@@ -167,18 +167,18 @@ function Get-SophosEndpoints {
     
         #Write-Host $endpoint_key
     
-        $endpoints_resp = Invoke-RestMethod -Method Get -Headers @{Authorization="Bearer $($sophosApiResponse["token_resp"].access_token)"; "X-Tenant-ID"=$sophosApiResponse["whoami_resp"].id} ($($sophosApiResponse["dataRegionApiUri"])+"/endpoint/v1/endpoints?pageSize=500&pageTotal=true&pageFromKey=$($endpoint_key)")
+        $endpoints_resp = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($sophosApiResponse["token_resp"].access_token)"; "X-Tenant-ID" = $sophosApiResponse["whoami_resp"].id } ($($sophosApiResponse["dataRegionApiUri"]) + "/endpoint/v1/endpoints?pageSize=500&pageTotal=true&pageFromKey=$($endpoint_key)")
             
         # enumerate results and append to csv
         $sophosEndpoints += @($endpoints_resp.items | 
-            Select-Object -Property id,type,hostname,health,os,
-            @{name="ipv4Addresses"; expression={$_.ipv4Addresses | Select-Object -First 1}},
-            @{name="ipv6Addresses"; expression={$_.ipv6Addresses | Select-Object -First 1}},
-            @{name="macAddresses"; expression={$_.macAddresses | Select-Object -First 1}},
-            associatedPerson,tamperProtectionEnabled,
-            @{name="endpointProtection"; expression={$_.assignedProducts[0] | Where-Object -Property code -eq -Value "endpointProtection"}},
-            @{name="interceptX"; expression={$_.assignedProducts[1] | Where-Object -Property code -eq -Value "interceptX"}},
-            @{name="coreAgent"; expression={$_.assignedProducts[2] | Where-Object -Property code -eq -Value "coreAgent"}},
+            Select-Object -Property id, type, hostname, health, os,
+            @{name = "ipv4Addresses"; expression = { $_.ipv4Addresses | Select-Object -First 1 } },
+            @{name = "ipv6Addresses"; expression = { $_.ipv6Addresses | Select-Object -First 1 } },
+            @{name = "macAddresses"; expression = { $_.macAddresses | Select-Object -First 1 } },
+            associatedPerson, tamperProtectionEnabled,
+            @{name = "endpointProtection"; expression = { $_.assignedProducts[0] | Where-Object -Property code -eq -Value "endpointProtection" } },
+            @{name = "interceptX"; expression = { $_.assignedProducts[1] | Where-Object -Property code -eq -Value "interceptX" } },
+            @{name = "coreAgent"; expression = { $_.assignedProducts[2] | Where-Object -Property code -eq -Value "coreAgent" } },
             lastSeenAt)
         #Write-Host $endpoints_resp.items
             
@@ -195,7 +195,7 @@ function Get-SophosEndpoints {
 
     
     # sort the endpoints using the "lastSeenAt" property descending and then group endpoints with the same hostname
-    $endpoints_grouped_duplicates_sorted = $sophosEndpoints | Sort-Object {$_."lastSeenAt" -as [datetime]} -Descending | Group-Object "hostname"
+    $endpoints_grouped_duplicates_sorted = $sophosEndpoints | Sort-Object { $_."lastSeenAt" -as [datetime] } -Descending | Group-Object "hostname"
 
     ForEach ($endpoint_group in $endpoints_grouped_duplicates_sorted) {
 
@@ -211,7 +211,8 @@ function Get-SophosEndpoints {
 
     if ($export) {
         $sophosEndpoints_noDupes = $sophosEndpoints_noDupes | Export-Csv -Path .\endpoints.csv -NoTypeInformation -Encoding UTF8
-    } else {
+    }
+    else {
         $sophosEndpoints_noDupes = $sophosEndpoints_noDupes | Sort-Object "hostname"
     }
 
@@ -223,14 +224,14 @@ function Get-SophosEndpointId {
 
     param (
     
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [String] 
         $computerName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         $sophosApiResponse
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         $sophosEndpoints
 
     )
@@ -243,7 +244,7 @@ function Get-SophosEndpointId {
     ForEach ($endpoint in $sophosEndpoints) {
         #Write-Host $endpoint
         
-        if($computerName -eq $endpoint.hostname) {
+        if ($computerName -eq $endpoint.hostname) {
             return $endpoint.id
         }
 
@@ -258,15 +259,23 @@ function Connect-Sophos {
     [Alias("Authenticate-SophosApi")]
     param()
 
+    <#
     try {
         $apiCredentials = Read-Host "Enter path to sophos api credentials file (\path\to\filename.json)"
         $apiCredentials = Get-Content $apiCredentials | ConvertFrom-Json
     } catch {
         Write-Error "[ERROR] api credential file not found or is formatted improperly"
     }
+    #>
+    if (!($global:client_id)) {
+        $global:client_id = Read-Host "Enter sophos api client id"
+    }
+    if (!($global:client_secret)) {
+        $global:client_secret = Read-Host "Enter sophos api client SECRET" -AsSecureString
+    }
 
-    $client_id = $apiCredentials.client_id
-    $client_secret = $apiCredentials.client_secret
+    $client_id = $global:client_id
+    $client_secret = [pscredential]::new($client_id, $global:client_secret).GetNetworkCredential().Password
     $sophosApiResponse = @{}
 
     Write-Host "Authenticating with Sophos API...."
@@ -275,12 +284,12 @@ function Connect-Sophos {
     $token_resp = Invoke-RestMethod -Method Post -ContentType "application/x-www-form-urlencoded" -Body "grant_type=client_credentials&client_id=$client_id&client_secret=$client_secret&scope=token" -Uri https://id.sophos.com/api/v2/oauth2/token
 
     
-    $whoami_resp = Invoke-RestMethod -Method Get -Headers @{Authorization="Bearer $($token_resp.access_token)"} https://api.central.sophos.com/whoami/v1
+    $whoami_resp = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($token_resp.access_token)" } https://api.central.sophos.com/whoami/v1
 
     $dataRegionApiUri = $whoami_resp.apiHosts.dataRegion
 
     # Get all endpoints within the tenant
-    $endpoints_resp = Invoke-RestMethod -Method Get -Headers @{Authorization="Bearer $($token_resp.access_token)"; "X-Tenant-ID"=$whoami_resp.id} ($($whoami_resp.apiHosts.dataRegion)+"/endpoint/v1/endpoints")
+    $endpoints_resp = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($token_resp.access_token)"; "X-Tenant-ID" = $whoami_resp.id } ($($whoami_resp.apiHosts.dataRegion) + "/endpoint/v1/endpoints")
 
     $sophosApiResponse["token_resp"] = $token_resp
     $sophosApiResponse["whoami_resp"] = $whoami_resp
@@ -340,25 +349,25 @@ function Get-SophosTamperProtectionStatus {
     [CmdletBinding()]
     [Alias("Check-TamperProtectionStatus")]
     Param (
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]
         $csv
         ,
-        [Parameter(Mandatory=$false,ValueFromPipeline=$true)]
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true)]
         [String] 
         $computerName
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         $sophosApiResponse
         ,
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         $sophosEndpoints
     )
 
     $sophosApiResponse = Authenticate-SophosApi
     $sophosEndpoints = Get-SophosEndpoints -sophosApiResponse $sophosApiResponse
 
-    if($csv) {
+    if ($csv) {
 
         $hostListCsv = Import-SophosEndpointHostList -csv $csv
 
@@ -371,7 +380,7 @@ function Get-SophosTamperProtectionStatus {
                 #Write-Host $endpoint.hostname
                 #Write-Host $hostname.hosts
     
-                if($endpoint.hostname -eq $hostname.hosts -And $tamperProtectionEnabled -eq $false) {
+                if ($endpoint.hostname -eq $hostname.hosts -And $tamperProtectionEnabled -eq $false) {
             
                     Write-Host "Tamper Protection is DISABLED for $($hostname.hosts)"
 
@@ -386,7 +395,7 @@ function Get-SophosTamperProtectionStatus {
         }
     }
 
-    elseif($computerName) {
+    elseif ($computerName) {
 
         ForEach ($endpoint in $sophosEndpoints) {
         
@@ -395,7 +404,7 @@ function Get-SophosTamperProtectionStatus {
             #Write-Host $endpoint.hostname
             #Write-Host $hostname.hosts
     
-            if($endpoint.hostname -eq $computerName -And $tamperProtectionEnabled -eq $false) {
+            if ($endpoint.hostname -eq $computerName -And $tamperProtectionEnabled -eq $false) {
             
                 Write-Host "Tamper Protection is DISABLED for $($computerName)"
 
@@ -411,4 +420,47 @@ function Get-SophosTamperProtectionStatus {
     else {
         Write-Error "missing computerName or csv"
     }
+}
+
+function Export-SophosPeripheralPolicy {
+    param(
+        $sophosApiResponse
+    )
+    $policyResponse = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($sophosApiResponse.token_resp.access_token)"; "X-Tenant-ID" = $sophosApiResponse.whoami_resp.id } -Uri ($($sophosApiResponse.whoami_resp.apiHosts.dataRegion) + "/endpoint/v1/policies?policyType=peripheral-control")
+    # create hashtables to store Peripheral Infos
+    $peripherals = @{}
+    foreach ($policy in $policyResponse.items) {
+        if (([bool]$policy.enabled -eq $false) -or [string]::IsNullOrEmpty($policy.settings."endpoint.peripheral-control.exemptions".value)) {
+            continue
+        }
+        Write-Host "Processing Policy: $($policy.name) ..."
+        foreach($peripheralExemption in ($policy.settings.'endpoint.peripheral-control.exemptions'.value)) {           
+            # Check hashtable for peripheral entry
+            if(!$peripherals.ContainsKey($peripheralExemption.peripheralId)) {
+                # if no entry exists in the hashtable, fetch info from API and add to hashtable
+                $peripherals[$peripheralExemption.peripheralId] = Get-SophosPeripheralById -sophosApiResponse $sophosApiResponse -peripheralId ($peripheralExemption.peripheralId)
+            }         
+            # peripheralInfos for the current item: $peripherals[$peripheralExemption.peripheralId]
+            # replace illegal characters in filename by splitting at [System.IO.Path]::GetInvalidFileNameChars() and then join with a "_" character
+            # separate files for each action (allowed, blocked, monitored, etc.)
+            $peripherals[$peripheralExemption.peripheralId]."$($peripheralExemption.enforceBy)Id" | Out-File -FilePath (("peripheralPolicy-$($policy.name)-$($peripheralExemption.action)-$($peripheralExemption.enforceBy).csv").Split([System.IO.Path]::GetInvalidFileNameChars()) -join "_") -Append
+        }
+    }
+}
+
+function Invoke-SophosPeripheralPolicyFilesCleanUpDuplicates {
+    # cleans up duplicate entries in peripheral policy files
+    foreach($file in (Get-ChildItem "peripheral*.csv")) {
+        Get-Content $file | Sort-Object -Unique | Set-Content $file   
+    }
+}
+
+function Get-SophosPeripheralById {
+    param(
+        $sophosApiResponse,
+        [Parameter(Mandatory = $true)]
+        $peripheralId
+    )
+    $peripheralResponse = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($sophosApiResponse.token_resp.access_token)"; "X-Tenant-ID" = $sophosApiResponse.whoami_resp.id } -Uri ($($sophosApiResponse.whoami_resp.apiHosts.dataRegion) + "/endpoint/v1/settings/peripheral-control/peripherals/" + $peripheralId)
+    return $peripheralResponse
 }
