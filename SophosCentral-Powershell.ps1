@@ -348,6 +348,7 @@ function Import-SophosEndpointHostList {
 function Get-SophosTamperProtectionStatus {
     [CmdletBinding()]
     [Alias("Check-TamperProtectionStatus")]
+    [Alias("Get-SophosTamperProtection")]  
     Param (
         [Parameter(Mandatory = $false)]
         [string]
