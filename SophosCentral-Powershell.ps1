@@ -9,7 +9,9 @@ function Set-SophosTamperProtection {
         [Parameter(Mandatory = $false, ValueFromPipeline = $true,
             ParameterSetName = "Single-System")]
         [string]
-        $computerName
+        $computerName,
+        [array]
+        $endpoints
         ,
         [Parameter(Mandatory = $false,
             ParameterSetName = "CSV-Import")]
@@ -103,10 +105,13 @@ function Set-SophosTamperProtection {
     }
     elseIf ($computerName) {
         
-
-        # get the associated endpointId for the specified $ComputerName
+        if($endpoints) {
+            $endpointId = Get-SophosEndpointId $computerName -SophosEndpoints $endpoints
+        } else {
+            # get the associated endpointId for the specified $ComputerName (SLOWER)
+            $endpointId = Get-SophosEndpointId $computerName
+        }
         
-        $endpointId = Get-SophosEndpointId $computerName
 
         if ($null -eq $endpointId) {
             return
@@ -250,7 +255,7 @@ function Get-SophosEndpointId {
 
     }
     Write-Host "Device: $computerName not found. Please check spelling."
-    return
+    return $false
 }
 
 
@@ -327,7 +332,7 @@ function Import-SophosEndpointHostList {
 
         }
 
-        if ($hostListCsv[0].psobject.properties.name -cne "hosts") {
+        if ($hostListCsv[0].psobject.properties.name -notcontains "hosts") {
             Write-Error "csv file must use the field header 'hosts'"
             return
         }
@@ -365,8 +370,12 @@ function Get-SophosTamperProtectionStatus {
         $sophosEndpoints
     )
 
-    $sophosApiResponse = Authenticate-SophosApi
-    $sophosEndpoints = Get-SophosEndpoints -sophosApiResponse $sophosApiResponse
+    if(!$sophosEndpoints) {
+        if(!$sophosApiResponse) {
+            $sophosApiResponse = Authenticate-SophosApi
+        }
+        $sophosEndpoints = Get-SophosEndpoints -sophosApiResponse $sophosApiResponse
+    }
 
     if ($csv) {
 
@@ -407,12 +416,14 @@ function Get-SophosTamperProtectionStatus {
     
             if ($endpoint.hostname -eq $computerName -And $tamperProtectionEnabled -eq $false) {
             
-                Write-Host "Tamper Protection is DISABLED for $($computerName)"
+                # Write-Host "Tamper Protection is DISABLED for $($computerName)"
+                return $false
 
             }
             elseif ($endpoint.hostname -eq $computerName -And $tamperProtectionEnabled -eq $true) {
         
-                Write-Host "Tamper Protection is ENABLED for $($computerName)"
+                # Write-Host "Tamper Protection is ENABLED for $($computerName)"
+                return $true
             }
     
         }
@@ -464,4 +475,57 @@ function Get-SophosPeripheralById {
     )
     $peripheralResponse = Invoke-RestMethod -Method Get -Headers @{Authorization = "Bearer $($sophosApiResponse.token_resp.access_token)"; "X-Tenant-ID" = $sophosApiResponse.whoami_resp.id } -Uri ($($sophosApiResponse.whoami_resp.apiHosts.dataRegion) + "/endpoint/v1/settings/peripheral-control/peripherals/" + $peripheralId)
     return $peripheralResponse
+}
+
+function Remove-SophosEndpoint {
+    # Removes an endpoint from Sophos Central
+    param (
+        
+        [Parameter(Mandatory = $false)]
+        $sophosApiResponse
+        ,
+        [Parameter(Mandatory = $true)]
+        $ComputerName,
+        [Parameter(Mandatory = $false)]
+        $sophosEndpoints
+    
+    )
+    
+    if (!($sophosApiResponse)) {
+        $sophosApiResponse = Authenticate-SophosApi
+    }
+
+    if($sophosEndpoints) {
+        $endpointId = Get-SophosEndpointId $computerName -SophosEndpoints $sophosEndpoints
+    } else {
+        # get the associated endpointId for the specified $ComputerName (SLOWER)
+        $endpointId = Get-SophosEndpointId $computerName
+    }
+    if($endpointId -eq $false) {
+        return $false
+    }
+    
+    # parameter hashtable for better readability
+    $requestParams = @{
+        "Method" = "DELETE" # using DELETE HTTP Method to remove the endpoint
+        "Headers" = @{
+            Authorization = "Bearer $($sophosApiResponse["token_resp"].access_token)"
+            "X-Tenant-ID" = $sophosApiResponse["whoami_resp"].id
+        }
+        "Uri" = ($($sophosApiResponse["dataRegionApiUri"]) + "/endpoint/v1/endpoints/$($endpointId)")
+    }
+    
+    try {
+        $requestResponse = Invoke-RestMethod @requestParams
+    } catch {
+        Write-Host "Error while trying to remove endpoint $($ComputerName): $($_.Exception.Message)"
+        return $false
+    }
+
+    # if the endpoint was successfully deleted, return $true, else return $false
+    if($requestResponse.deleted -eq $true) {
+        return $true
+    } else {
+        return $false
+    }
 }
